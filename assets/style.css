@@ -1,0 +1,18 @@
+.card-shadow {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+}
+
+.table td,
+.table th {
+    vertical-align: middle;
+}
+
+.auth-wrapper {
+    max-width: 460px;
+    margin: 40px auto;
+}
+
+a { 
+    color:#0b66d6; 
+    text-decoration: none;
+}
