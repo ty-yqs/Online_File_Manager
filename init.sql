@@ -35,13 +35,18 @@ CREATE TABLE IF NOT EXISTS `files` (
   `category_id` INT UNSIGNED NULL,
   `uploader_id` INT UNSIGNED NOT NULL,
   `uploaded_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `deleted_at` DATETIME NULL DEFAULT NULL,
+  `deleted_by` INT UNSIGNED NULL DEFAULT NULL,
   `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `idx_files_uploader` (`uploader_id`),
   KEY `idx_files_category` (`category_id`),
+  KEY `idx_files_deleted_at` (`deleted_at`),
+  KEY `idx_files_deleted_by` (`deleted_by`),
   KEY `idx_files_uploaded_at` (`uploaded_at`),
   CONSTRAINT `fk_files_category` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE SET NULL,
-  CONSTRAINT `fk_files_uploader` FOREIGN KEY (`uploader_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+  CONSTRAINT `fk_files_uploader` FOREIGN KEY (`uploader_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_files_deleted_by` FOREIGN KEY (`deleted_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS `file_logs` (

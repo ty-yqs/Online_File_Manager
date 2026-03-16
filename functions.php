@@ -17,7 +17,7 @@ function get_files(PDO $pdo, string $keyword = '', int $categoryId = 0): array
             FROM files f
             INNER JOIN users u ON u.id = f.uploader_id
             LEFT JOIN categories c ON c.id = f.category_id
-            WHERE 1=1';
+            WHERE f.deleted_at IS NULL';
 
     $params = [];
 
@@ -41,11 +41,45 @@ function get_files(PDO $pdo, string $keyword = '', int $categoryId = 0): array
 
 function get_file_by_id(PDO $pdo, int $fileId): ?array
 {
+    $stmt = $pdo->prepare('SELECT * FROM files WHERE id = :id AND deleted_at IS NULL LIMIT 1');
+    $stmt->execute([':id' => $fileId]);
+    $file = $stmt->fetch();
+
+    return $file ?: null;
+}
+
+function get_file_by_id_with_deleted(PDO $pdo, int $fileId): ?array
+{
     $stmt = $pdo->prepare('SELECT * FROM files WHERE id = :id LIMIT 1');
     $stmt->execute([':id' => $fileId]);
     $file = $stmt->fetch();
 
     return $file ?: null;
+}
+
+function get_recycle_bin_files(PDO $pdo, string $keyword = ''): array
+{
+    $sql = 'SELECT f.id, f.original_name, f.file_ext, f.file_size, f.stored_path, f.uploaded_at,
+                   f.deleted_at, u.username AS uploader_name,
+                   d.username AS deleted_by_name
+            FROM files f
+            INNER JOIN users u ON u.id = f.uploader_id
+            LEFT JOIN users d ON d.id = f.deleted_by
+            WHERE f.deleted_at IS NOT NULL';
+
+    $params = [];
+
+    if ($keyword !== '') {
+        $sql .= ' AND f.original_name LIKE :keyword';
+        $params[':keyword'] = '%' . $keyword . '%';
+    }
+
+    $sql .= ' ORDER BY f.deleted_at DESC';
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+
+    return $stmt->fetchAll();
 }
 
 function format_file_size(int $bytes): string

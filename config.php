@@ -52,6 +52,7 @@ function db(): PDO
 
     if (!$schemaEnsured) {
         ensure_user_approval_schema($pdo);
+        ensure_recycle_bin_schema($pdo);
         $schemaEnsured = true;
     }
 
@@ -60,21 +61,72 @@ function db(): PDO
 
 function ensure_user_approval_schema(PDO $pdo): void
 {
-    $stmt = $pdo->prepare('SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = :schema_name AND TABLE_NAME = :table_name AND COLUMN_NAME = :column_name');
-    $stmt->execute([
-        ':schema_name' => DB_NAME,
-        ':table_name' => 'users',
-        ':column_name' => 'is_approved',
-    ]);
-
-    $exists = (int) $stmt->fetchColumn() > 0;
-    if ($exists) {
+    if (schema_column_exists($pdo, 'users', 'is_approved')) {
         return;
     }
 
     $pdo->exec('ALTER TABLE users ADD COLUMN is_approved TINYINT(1) NOT NULL DEFAULT 0 AFTER role');
     $pdo->exec('ALTER TABLE users ADD COLUMN approved_at DATETIME NULL DEFAULT NULL AFTER is_approved');
     $pdo->exec('UPDATE users SET is_approved = 1, approved_at = NOW()');
+}
+
+function ensure_recycle_bin_schema(PDO $pdo): void
+{
+    if (!schema_column_exists($pdo, 'files', 'deleted_at')) {
+        $pdo->exec('ALTER TABLE files ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL AFTER uploaded_at');
+    }
+
+    if (!schema_column_exists($pdo, 'files', 'deleted_by')) {
+        $pdo->exec('ALTER TABLE files ADD COLUMN deleted_by INT UNSIGNED NULL DEFAULT NULL AFTER deleted_at');
+    }
+
+    if (!schema_index_exists($pdo, 'files', 'idx_files_deleted_at')) {
+        $pdo->exec('ALTER TABLE files ADD KEY idx_files_deleted_at (deleted_at)');
+    }
+
+    if (!schema_index_exists($pdo, 'files', 'idx_files_deleted_by')) {
+        $pdo->exec('ALTER TABLE files ADD KEY idx_files_deleted_by (deleted_by)');
+    }
+
+    if (!schema_foreign_key_exists($pdo, 'files', 'fk_files_deleted_by')) {
+        $pdo->exec('ALTER TABLE files ADD CONSTRAINT fk_files_deleted_by FOREIGN KEY (deleted_by) REFERENCES users(id) ON DELETE SET NULL');
+    }
+}
+
+function schema_column_exists(PDO $pdo, string $tableName, string $columnName): bool
+{
+    $stmt = $pdo->prepare('SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = :schema_name AND TABLE_NAME = :table_name AND COLUMN_NAME = :column_name');
+    $stmt->execute([
+        ':schema_name' => DB_NAME,
+        ':table_name' => $tableName,
+        ':column_name' => $columnName,
+    ]);
+
+    return (int) $stmt->fetchColumn() > 0;
+}
+
+function schema_index_exists(PDO $pdo, string $tableName, string $indexName): bool
+{
+    $stmt = $pdo->prepare('SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = :schema_name AND TABLE_NAME = :table_name AND INDEX_NAME = :index_name');
+    $stmt->execute([
+        ':schema_name' => DB_NAME,
+        ':table_name' => $tableName,
+        ':index_name' => $indexName,
+    ]);
+
+    return (int) $stmt->fetchColumn() > 0;
+}
+
+function schema_foreign_key_exists(PDO $pdo, string $tableName, string $constraintName): bool
+{
+    $stmt = $pdo->prepare('SELECT COUNT(*) FROM information_schema.REFERENTIAL_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = :schema_name AND TABLE_NAME = :table_name AND CONSTRAINT_NAME = :constraint_name');
+    $stmt->execute([
+        ':schema_name' => DB_NAME,
+        ':table_name' => $tableName,
+        ':constraint_name' => $constraintName,
+    ]);
+
+    return (int) $stmt->fetchColumn() > 0;
 }
 
 function e(string $value): string

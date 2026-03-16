@@ -218,7 +218,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             redirect('admin.php');
         }
 
-        $check = $pdo->prepare('SELECT COUNT(*) FROM files WHERE category_id = :id');
+        $check = $pdo->prepare('SELECT COUNT(*) FROM files WHERE category_id = :id AND deleted_at IS NULL');
         $check->execute([':id' => $categoryId]);
         if ((int) $check->fetchColumn() > 0) {
             set_flash('danger', '该分类下仍有文件，无法删除。');
@@ -233,7 +233,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $userCount = (int) $pdo->query('SELECT COUNT(*) FROM users')->fetchColumn();
-$fileCount = (int) $pdo->query('SELECT COUNT(*) FROM files')->fetchColumn();
+$fileCount = (int) $pdo->query('SELECT COUNT(*) FROM files WHERE deleted_at IS NULL')->fetchColumn();
 $categories = get_categories($pdo);
 $users = $pdo->query('SELECT id, username, email, role, is_approved, approved_at, created_at FROM users ORDER BY created_at DESC')->fetchAll();
 

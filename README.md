@@ -17,8 +17,12 @@
 - 文件上传（最大 20MB）
 - 文件下载（统一经 `download.php`）
 - 文件删除
-   - `admin`：可删除任意文件
-   - `user`：仅可删除自己上传的文件
+   - `admin`：可将任意文件放入回收站
+   - `user`：仅可将自己上传的文件放入回收站
+- 回收站（仅管理员）
+   - 查看已删除文件
+   - 恢复文件（支持批量）
+   - 彻底删除文件（支持批量）
 - 文件重命名（管理员或上传者本人）
 - 文件分类（后台可增删分类）
 - 文件搜索与分类筛选
@@ -62,6 +66,7 @@ Online-File-Manager/
 ├── logout.php               # 退出
 ├── preview.php              # 文件在线预览流接口
 ├── register.php             # 注册（默认待审核）
+├── recycle_bin.php          # 回收站（仅管理员）
 ├── upload.php               # 上传页
 ├── README.md
 ├── assets/
@@ -141,6 +146,7 @@ location ^~ /storage/ {
 ## 6. 页面说明
 
 - `index.php`：文件列表、搜索、分类筛选、下载、预览、重命名、删除
+- `recycle_bin.php`：回收站（管理员可恢复或彻底删除）
 - `upload.php`：上传文件并选择分类
 - `login.php`：登录
 - `register.php`：注册（提交后待管理员审核）
@@ -165,6 +171,7 @@ location ^~ /storage/ {
 | 下载文件 | ✅ | ✅ |
 | 重命名文件 | ✅ | ✅（仅本人上传） |
 | 删除文件 | ✅（任意文件） | ✅（仅本人上传） |
+| 回收站查看/恢复/彻底删除 | ✅ | ❌ |
 | 分类管理 | ✅ | ❌ |
 | 用户管理/审核 | ✅ | ❌ |
 
@@ -189,7 +196,7 @@ location ^~ /storage/ {
    - 关键字段：`username`、`email`、`password_hash`、`role`、`is_approved`
 - `files`
    - 文件元数据与上传者、分类关联
-   - 关键字段：`original_name`、`stored_path`、`file_ext`、`mime_type`、`uploader_id`
+   - 关键字段：`original_name`、`stored_path`、`file_ext`、`mime_type`、`uploader_id`、`deleted_at`、`deleted_by`
 - `categories`
    - 文件分类表
 - `file_logs`

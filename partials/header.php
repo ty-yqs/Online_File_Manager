@@ -27,6 +27,7 @@ $user = current_user();
                     <li class="nav-item"><a class="nav-link" href="index.php">文件列表</a></li>
                     <li class="nav-item"><a class="nav-link" href="upload.php">上传文件</a></li>
                     <?php if (($user['role'] ?? '') === 'admin'): ?>
+                        <li class="nav-item"><a class="nav-link" href="recycle_bin.php">回收站</a></li>
                         <li class="nav-item"><a class="nav-link" href="admin.php">管理后台</a></li>
                     <?php endif; ?>
                 </ul>

@@ -36,22 +36,22 @@ if (!$canDelete) {
     redirect('index.php');
 }
 
-$fullPath = STORAGE_DIR . '/' . (string) $file['stored_path'];
-
 $pdo->beginTransaction();
 try {
-    log_file_action($pdo, (int) ($currentUser['id'] ?? 0), $fileId, 'delete', '删除文件：' . (string) $file['original_name']);
+    $stmt = $pdo->prepare('UPDATE files SET deleted_at = NOW(), deleted_by = :deleted_by, updated_at = NOW() WHERE id = :id AND deleted_at IS NULL');
+    $stmt->execute([
+        ':id' => $fileId,
+        ':deleted_by' => (int) ($currentUser['id'] ?? 0),
+    ]);
 
-    $stmt = $pdo->prepare('DELETE FROM files WHERE id = :id');
-    $stmt->execute([':id' => $fileId]);
-
-    $pdo->commit();
-
-    if (is_file($fullPath)) {
-        @unlink($fullPath);
+    if ((int) $stmt->rowCount() === 0) {
+        throw new RuntimeException('文件不存在或已在回收站中。');
     }
 
-    set_flash('success', '文件已删除。');
+    log_file_action($pdo, (int) ($currentUser['id'] ?? 0), $fileId, 'delete', '移入回收站：' . (string) $file['original_name']);
+
+    $pdo->commit();
+    set_flash('success', '文件已移入回收站。');
 } catch (Throwable $e) {
     $pdo->rollBack();
     set_flash('danger', '删除失败：' . $e->getMessage());
