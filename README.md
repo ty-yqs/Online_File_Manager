@@ -26,6 +26,14 @@
 - 文件重命名（管理员或上传者本人）
 - 文件分类（后台可增删分类）
 - 文件搜索与分类筛选
+- 分享链接（所有用户可创建）
+   - 支持设置有效期
+   - 支持设置访问密码
+   - 支持设置最大下载次数
+- 分享管理（仅管理员）
+   - 查看已创建分享链接
+   - 手动失效分享链接
+   - 重置下载次数
 
 ### 1.3 在线预览
 - `pdf`：站内 iframe 直接预览
@@ -67,6 +75,8 @@ Online-File-Manager/
 ├── preview.php              # 文件在线预览流接口
 ├── register.php             # 注册（默认待审核）
 ├── recycle_bin.php          # 回收站（仅管理员）
+├── share.php                # 分享链接创建与访问下载
+├── share_manage.php         # 分享管理（仅管理员）
 ├── upload.php               # 上传页
 ├── README.md
 ├── assets/
@@ -153,6 +163,8 @@ location ^~ /storage/ {
 - `admin.php`：分类管理、用户管理、注册审核、操作日志
 - `download.php`：下载入口（防止直接暴露存储目录）
 - `preview.php`：在线预览入口
+- `share.php`：分享链接创建与受控下载入口（有效期/密码/次数）
+- `share_manage.php`：分享管理页（管理员查看/失效/重置次数）
 
 ---
 
@@ -171,6 +183,8 @@ location ^~ /storage/ {
 | 下载文件 | ✅ | ✅ |
 | 重命名文件 | ✅ | ✅（仅本人上传） |
 | 删除文件 | ✅（任意文件） | ✅（仅本人上传） |
+| 创建分享链接（有效期/密码/次数） | ✅ | ✅ |
+| 分享管理（查看/失效/重置次数） | ✅ | ❌ |
 | 回收站查看/恢复/彻底删除 | ✅ | ❌ |
 | 分类管理 | ✅ | ❌ |
 | 用户管理/审核 | ✅ | ❌ |
@@ -189,7 +203,7 @@ location ^~ /storage/ {
 
 ## 9. 数据库设计
 
-数据库初始化脚本在 `init.sql`，包含 4 张业务表：
+数据库初始化脚本在 `init.sql`，包含 5 张业务表：
 
 - `users`
    - 账号基础信息、角色、审核状态
@@ -201,6 +215,9 @@ location ^~ /storage/ {
    - 文件分类表
 - `file_logs`
    - 操作日志（上传/删除/重命名/下载）
+- `file_shares`
+   - 文件分享链接控制表
+   - 关键字段：`share_token`、`password_hash`、`expires_at`、`max_downloads`、`download_count`
 
 ---
 
@@ -243,3 +260,4 @@ location ^~ /storage/ {
 - 登录页：`/login.php`
 - 文件列表：首页：`/index.php`
 - 管理后台：`/admin.php`
+- 分享管理：`/share_manage.php`（管理员）

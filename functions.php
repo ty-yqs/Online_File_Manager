@@ -82,6 +82,118 @@ function get_recycle_bin_files(PDO $pdo, string $keyword = ''): array
     return $stmt->fetchAll();
 }
 
+function generate_share_token(PDO $pdo): string
+{
+    for ($i = 0; $i < 8; $i++) {
+        $token = bin2hex(random_bytes(16));
+
+        $stmt = $pdo->prepare('SELECT id FROM file_shares WHERE share_token = :token LIMIT 1');
+        $stmt->execute([':token' => $token]);
+
+        if (!$stmt->fetch()) {
+            return $token;
+        }
+    }
+
+    throw new RuntimeException('生成分享链接失败，请重试。');
+}
+
+function create_file_share(
+    PDO $pdo,
+    int $fileId,
+    int $creatorId,
+    ?string $expiresAt,
+    ?string $password,
+    ?int $maxDownloads
+): string {
+    $token = generate_share_token($pdo);
+    $passwordHash = ($password !== null && $password !== '') ? password_hash($password, PASSWORD_DEFAULT) : null;
+
+    $stmt = $pdo->prepare(
+        'INSERT INTO file_shares (file_id, creator_id, share_token, password_hash, expires_at, max_downloads)
+         VALUES (:file_id, :creator_id, :share_token, :password_hash, :expires_at, :max_downloads)'
+    );
+
+    $stmt->execute([
+        ':file_id' => $fileId,
+        ':creator_id' => $creatorId,
+        ':share_token' => $token,
+        ':password_hash' => $passwordHash,
+        ':expires_at' => $expiresAt,
+        ':max_downloads' => $maxDownloads,
+    ]);
+
+    return $token;
+}
+
+function get_share_by_token(PDO $pdo, string $token): ?array
+{
+    $stmt = $pdo->prepare(
+        'SELECT s.id, s.file_id, s.creator_id, s.share_token, s.password_hash, s.expires_at,
+                s.max_downloads, s.download_count, s.is_active, s.created_at,
+                f.original_name, f.stored_path, f.mime_type, f.file_size, f.deleted_at
+         FROM file_shares s
+         INNER JOIN files f ON f.id = s.file_id
+         WHERE s.share_token = :token
+         LIMIT 1'
+    );
+    $stmt->execute([':token' => $token]);
+
+    $share = $stmt->fetch();
+    return $share ?: null;
+}
+
+function get_share_by_id(PDO $pdo, int $shareId): ?array
+{
+    $stmt = $pdo->prepare(
+        'SELECT s.id, s.file_id, s.creator_id, s.share_token, s.password_hash, s.expires_at,
+                s.max_downloads, s.download_count, s.is_active, s.created_at,
+                f.original_name, f.deleted_at,
+                u.username AS creator_name
+         FROM file_shares s
+         INNER JOIN files f ON f.id = s.file_id
+         INNER JOIN users u ON u.id = s.creator_id
+         WHERE s.id = :id
+         LIMIT 1'
+    );
+    $stmt->execute([':id' => $shareId]);
+
+    $share = $stmt->fetch();
+    return $share ?: null;
+}
+
+function get_admin_shares(PDO $pdo, string $keyword = '', string $status = 'all'): array
+{
+    $sql = 'SELECT s.id, s.file_id, s.creator_id, s.share_token, s.expires_at,
+                   s.max_downloads, s.download_count, s.is_active, s.created_at,
+                   f.original_name, f.deleted_at,
+                   u.username AS creator_name
+            FROM file_shares s
+            INNER JOIN files f ON f.id = s.file_id
+            INNER JOIN users u ON u.id = s.creator_id
+            WHERE 1=1';
+
+    $params = [];
+
+    if ($keyword !== '') {
+        $sql .= ' AND (f.original_name LIKE :keyword OR s.share_token LIKE :keyword OR u.username LIKE :keyword)';
+        $params[':keyword'] = '%' . $keyword . '%';
+    }
+
+    if ($status === 'active') {
+        $sql .= ' AND s.is_active = 1';
+    } elseif ($status === 'inactive') {
+        $sql .= ' AND s.is_active = 0';
+    }
+
+    $sql .= ' ORDER BY s.created_at DESC';
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+
+    return $stmt->fetchAll();
+}
+
 function format_file_size(int $bytes): string
 {
     $units = ['B', 'KB', 'MB', 'GB'];

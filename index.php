@@ -86,7 +86,7 @@ require __DIR__ . '/partials/header.php';
                     <th>大小</th>
                     <th>上传者</th>
                     <th>上传时间</th>
-                    <th style="width: 280px;">操作</th>
+                    <th style="width: 420px;">操作</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -124,6 +124,7 @@ require __DIR__ . '/partials/header.php';
                                         data-preview-url="<?= e($previewUrl) ?>"
                                     >预览</button>
                                     <a class="btn btn-sm btn-outline-primary" href="download.php?id=<?= (int) $file['id'] ?>">下载</a>
+                                    <button class="btn btn-sm btn-outline-success" type="button" data-bs-toggle="collapse" data-bs-target="#share-<?= (int) $file['id'] ?>">分享</button>
                                     <?php if (is_admin() || (int) $file['uploader_id'] === (int) $user['id']): ?>
                                         <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#rename-<?= (int) $file['id'] ?>">重命名</button>
                                     <?php endif; ?>
@@ -146,6 +147,28 @@ require __DIR__ . '/partials/header.php';
                                         </form>
                                     </div>
                                 <?php endif; ?>
+                                <div class="collapse mt-2" id="share-<?= (int) $file['id'] ?>">
+                                    <form method="post" action="share.php" class="row g-2">
+                                        <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+                                        <input type="hidden" name="action" value="create_share">
+                                        <input type="hidden" name="file_id" value="<?= (int) $file['id'] ?>">
+                                        <div class="col-md-4">
+                                            <input type="datetime-local" class="form-control form-control-sm" name="expires_at" title="有效期，可选">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <input type="password" class="form-control form-control-sm" name="share_password" maxlength="64" placeholder="分享密码(可选)">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <input type="number" class="form-control form-control-sm" name="max_downloads" min="1" placeholder="次数上限(可选)">
+                                        </div>
+                                        <div class="col-md-2 d-grid">
+                                            <button class="btn btn-sm btn-success" type="submit">生成链接</button>
+                                        </div>
+                                        <div class="col-12">
+                                            <small class="text-muted">留空表示永久有效、无密码、下载次数不限。</small>
+                                        </div>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
                     <?php endforeach; ?>

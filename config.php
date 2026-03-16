@@ -53,6 +53,7 @@ function db(): PDO
     if (!$schemaEnsured) {
         ensure_user_approval_schema($pdo);
         ensure_recycle_bin_schema($pdo);
+        ensure_file_share_schema($pdo);
         $schemaEnsured = true;
     }
 
@@ -91,6 +92,47 @@ function ensure_recycle_bin_schema(PDO $pdo): void
     if (!schema_foreign_key_exists($pdo, 'files', 'fk_files_deleted_by')) {
         $pdo->exec('ALTER TABLE files ADD CONSTRAINT fk_files_deleted_by FOREIGN KEY (deleted_by) REFERENCES users(id) ON DELETE SET NULL');
     }
+}
+
+function ensure_file_share_schema(PDO $pdo): void
+{
+    if (schema_table_exists($pdo, 'file_shares')) {
+        return;
+    }
+
+    $pdo->exec(
+        'CREATE TABLE IF NOT EXISTS file_shares (
+            id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+            file_id INT UNSIGNED NOT NULL,
+            creator_id INT UNSIGNED NOT NULL,
+            share_token CHAR(32) NOT NULL,
+            password_hash VARCHAR(255) NULL DEFAULT NULL,
+            expires_at DATETIME NULL DEFAULT NULL,
+            max_downloads INT UNSIGNED NULL DEFAULT NULL,
+            download_count INT UNSIGNED NOT NULL DEFAULT 0,
+            is_active TINYINT(1) NOT NULL DEFAULT 1,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            UNIQUE KEY uk_file_shares_token (share_token),
+            KEY idx_file_shares_file (file_id),
+            KEY idx_file_shares_creator (creator_id),
+            KEY idx_file_shares_expires (expires_at),
+            CONSTRAINT fk_file_shares_file FOREIGN KEY (file_id) REFERENCES files(id) ON DELETE CASCADE,
+            CONSTRAINT fk_file_shares_creator FOREIGN KEY (creator_id) REFERENCES users(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4'
+    );
+}
+
+function schema_table_exists(PDO $pdo, string $tableName): bool
+{
+    $stmt = $pdo->prepare('SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = :schema_name AND TABLE_NAME = :table_name');
+    $stmt->execute([
+        ':schema_name' => DB_NAME,
+        ':table_name' => $tableName,
+    ]);
+
+    return (int) $stmt->fetchColumn() > 0;
 }
 
 function schema_column_exists(PDO $pdo, string $tableName, string $columnName): bool

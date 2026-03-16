@@ -64,6 +64,27 @@ CREATE TABLE IF NOT EXISTS `file_logs` (
   CONSTRAINT `fk_logs_file` FOREIGN KEY (`file_id`) REFERENCES `files` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS `file_shares` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `file_id` INT UNSIGNED NOT NULL,
+  `creator_id` INT UNSIGNED NOT NULL,
+  `share_token` CHAR(32) NOT NULL,
+  `password_hash` VARCHAR(255) NULL DEFAULT NULL,
+  `expires_at` DATETIME NULL DEFAULT NULL,
+  `max_downloads` INT UNSIGNED NULL DEFAULT NULL,
+  `download_count` INT UNSIGNED NOT NULL DEFAULT 0,
+  `is_active` TINYINT(1) NOT NULL DEFAULT 1,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_file_shares_token` (`share_token`),
+  KEY `idx_file_shares_file` (`file_id`),
+  KEY `idx_file_shares_creator` (`creator_id`),
+  KEY `idx_file_shares_expires` (`expires_at`),
+  CONSTRAINT `fk_file_shares_file` FOREIGN KEY (`file_id`) REFERENCES `files` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_file_shares_creator` FOREIGN KEY (`creator_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 INSERT INTO `users` (`username`, `email`, `password_hash`, `role`, `is_approved`, `approved_at`)
 VALUES ('admin', 'admin@example.com', '$2y$10$0m.wXKmEVPSYL/qBFAxmOeBwzG8Kh/6JtUhSuHE1enAWqAWHaM45e', 'admin', 1, NOW())
 ON DUPLICATE KEY UPDATE `username` = `username`;
